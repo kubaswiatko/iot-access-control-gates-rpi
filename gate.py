@@ -168,6 +168,15 @@ class AccessGate:
     def _on_mqtt_message(self, client, userdata, msg):
         try:
             payload = json.loads(msg.payload.decode())
+            resp_gate = payload.get("gate_id")
+            # Ignore responses intended for other gates
+            if resp_gate is None:
+                print("[MQTT] Warning: response without gate_id received")
+                return
+            if resp_gate != self.gate_id:
+                print(f"[MQTT] Ignored message for gate {resp_gate}")
+                return
+
             if self.waiting_for_server:
                 self.handle_result(payload.get("status"), payload.get("reason", ""))
         except Exception as e:

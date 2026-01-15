@@ -31,10 +31,11 @@ class Server:
         try:
             # Determine direction string required by API ("in" | "out")
             direction = payload.get("direction", "in")
-            
+            gate_id = payload.get("gate_id")
+
             data = {
                 "rfid": str(payload.get("rfid")),
-                "gateIdentifier": payload.get("gate_id", "GATE_01"),
+                "gateIdentifier": gate_id,
                 "direction": direction
             }
 
@@ -50,26 +51,31 @@ class Server:
                     
             except requests.exceptions.RequestException as e:
                 print(f"[API] Network error: {e}")
-                return {"status": "ERROR", "reason": "NETWORK_FAIL", "debug": str(e)}
+                return {"status": "ERROR", "reason": "NETWORK_FAIL", "debug": str(e), "gate_id": gate_id}
 
             if status == 200:
-                return {"status": "GRANTED", "message": "Access Granted"}
+                return {"status": "GRANTED", "message": "Access Granted", "gate_id": gate_id}
             
             error_code = resp_json.get("error", {}).get("code", "UNKNOWN")
             error_msg = resp_json.get("error", {}).get("message", "Unknown error")
 
             if error_code == "USER_BANNED":
-                return {"status": "DENIED", "reason": "BANNED"}
+                return {"status": "DENIED", "reason": "BANNED", "gate_id": gate_id}
             elif error_code in ("USER_ALREADY_IN", "USER_ALREADY_OUT"):
-                return {"status": "DENIED", "reason": "DIRECTION_ERROR"}
+                return {"status": "DENIED", "reason": "DIRECTION_ERROR", "gate_id": gate_id}
             elif error_code == "GATE_INACTIVE":
-                return {"status": "ERROR", "reason": "GATE_LOCKED"}
+                return {"status": "ERROR", "reason": "GATE_LOCKED", "gate_id": gate_id}
             else:
-                return {"status": "DENIED", "reason": "UNKNOWN", "debug": error_msg}
+                return {"status": "DENIED", "reason": "UNKNOWN", "debug": error_msg, "gate_id": gate_id}
 
         except Exception as e:
             print(f"[API] Unexpected Logic Error: {e}")
-            return {"status": "ERROR", "reason": "SERVER_ERROR"}
+            # Include gate_id if present in payload
+            gate_id = payload.get("gate_id") if isinstance(payload, dict) else None
+            resp = {"status": "ERROR", "reason": "SERVER_ERROR"}
+            if gate_id:
+                resp["gate_id"] = gate_id
+            return resp
 
     def on_connect(self, client, userdata, flags, rc):
         print(f"[MQTT] Connected to broker (Code: {rc})")
@@ -102,7 +108,7 @@ class Server:
             self.client.loop_forever()
 
             while True:
-                time.sleep(1)
+                pass
 
         except KeyboardInterrupt:
             print("\nStopping server...")
