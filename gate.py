@@ -211,6 +211,7 @@ class AccessGate:
 
         except KeyboardInterrupt:
             print("\nExiting...")
+            self.cleanup()
         finally:
             self.cleanup()
 

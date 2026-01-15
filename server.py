@@ -8,10 +8,8 @@ import os
 
 ENDPOINT_ENTRY = "/entry-access"
 
-import aiohttp
-import asyncio
-
 class Server:
+
     def __init__(self):
         #-- MQTT Setup ---
         load_dotenv()
@@ -102,6 +100,9 @@ class Server:
         try:
             self.client.connect(self.mqtt_broker, 1883, 60)
             self.client.loop_forever()
+
+            while True:
+                time.sleep(1)
 
         except KeyboardInterrupt:
             print("\nStopping server...")
