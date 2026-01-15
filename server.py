@@ -60,15 +60,14 @@ class Server:
             error_code = resp_json.get("error", {}).get("code", "UNKNOWN")
             error_msg = resp_json.get("error", {}).get("message", "Unknown error")
 
-            match error_code:
-                case "USER_BANNED":
-                    return {"status": "DENIED", "reason": "BANNED"}
-                case "USER_ALREADY_IN" | "USER_ALREADY_OUT":
-                    return {"status": "DENIED", "reason": "DIRECTION_ERROR"}
-                case "GATE_INACTIVE":
-                    return {"status": "ERROR", "reason": "GATE_LOCKED"}
-                case _:
-                    return {"status": "DENIED", "reason": "UNKNOWN", "debug": error_msg}
+            if error_code == "USER_BANNED":
+                return {"status": "DENIED", "reason": "BANNED"}
+            elif error_code in ("USER_ALREADY_IN", "USER_ALREADY_OUT"):
+                return {"status": "DENIED", "reason": "DIRECTION_ERROR"}
+            elif error_code == "GATE_INACTIVE":
+                return {"status": "ERROR", "reason": "GATE_LOCKED"}
+            else:
+                return {"status": "DENIED", "reason": "UNKNOWN", "debug": error_msg}
 
         except Exception as e:
             print(f"[API] Unexpected Logic Error: {e}")
