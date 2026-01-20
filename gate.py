@@ -94,6 +94,29 @@ class AccessGate:
         draw.text((0, 30), line2, font=self.font_small, fill=color)
         self.disp.ShowImage(image, 0, 0)
 
+    def show_result_image(self, status, reason=""):
+        """Display result image with optional text on OLED screen."""
+        try:
+            if status == "GRANTED":
+                image = Image.open('./usmiechniety_skolim.jpeg')
+                text = "Access Granted"
+            else:
+                image = Image.open('./smutny_skolim.jpg')
+                if reason == "BANNED":
+                    text = "User Banned"
+                elif reason == "DIRECTION_ERROR":
+                    text = "Already In/Out"
+                else:
+                    text = "Access Denied"
+            
+            # Display image
+            self.disp.ShowImage(image, 0, 0)
+            
+        except Exception as e:
+            print(f"[OLED] Error displaying image: {e}")
+            # Fallback to text display
+            self.update_display(text, reason, "YELLOW")
+
     # --- Core Logic ---
     def wait_for_direction(self):
         """Waits for Green (IN) or Red (OUT) button press."""
@@ -141,7 +164,8 @@ class AccessGate:
         print(f"[LOGIC] Result: {status} ({reason})")
         
         if status == "GRANTED":
-            self.update_display("ACCESS GRANTED", "Welcome!")
+            # self.update_display("ACCESS GRANTED", "Welcome!")
+            self.show_result_image("GRANTED")
             self.set_led_strip((0, 255, 0)) # Green
             self.play_tone("success")
         else:
@@ -153,7 +177,8 @@ class AccessGate:
             else:
                 msg = "ACCESS DENIED"
             
-            self.update_display(msg, reason)
+            # self.update_display(msg, reason)
+            self.show_result_image("DENIED", reason)
             self.set_led_strip((255, 0, 0)) # Red
             self.play_tone("error")
 
