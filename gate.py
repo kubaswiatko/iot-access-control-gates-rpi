@@ -41,6 +41,7 @@ class AccessGate:
 
     def _setup_gpio(self):
         self.buzzer_pwm = GPIO.PWM(buzzerPin, 1000) # Initial 1kHz
+        self.buzzer_pwm.start(0) # Start with 0% duty cycle (silent)
 
     def _setup_oled(self):
         self.disp = SSD1331.SSD1331()
@@ -64,26 +65,26 @@ class AccessGate:
     def play_tone(self, tone_type):
         """Plays a melody based on type: 'success', 'error', 'click'."""
         if tone_type == "click":
-            self.buzzer_pwm.start(50)
+            self.buzzer_pwm.ChangeDutyCycle(50)
             self.buzzer_pwm.ChangeFrequency(2000)
             time.sleep(0.05)
-            self.buzzer_pwm.stop()
+            self.buzzer_pwm.ChangeDutyCycle(0)
         elif tone_type == "success":
-            self.buzzer_pwm.start(50)
+            self.buzzer_pwm.ChangeDutyCycle(50)
             self.buzzer_pwm.ChangeFrequency(1000)
             time.sleep(0.1)
             self.buzzer_pwm.ChangeFrequency(1500)
             time.sleep(0.1)
             self.buzzer_pwm.ChangeFrequency(2000)
             time.sleep(0.2)
-            self.buzzer_pwm.stop()
+            self.buzzer_pwm.ChangeDutyCycle(0)
         elif tone_type == "error":
-            self.buzzer_pwm.start(50)
+            self.buzzer_pwm.ChangeDutyCycle(50)
             self.buzzer_pwm.ChangeFrequency(500)
             time.sleep(0.3)
             self.buzzer_pwm.ChangeFrequency(300)
             time.sleep(0.3)
-            self.buzzer_pwm.stop()
+            self.buzzer_pwm.ChangeDutyCycle(0)
 
     def update_display(self, line1, line2="", color="WHITE"):
         """Draws text on the OLED screen."""
