@@ -3,7 +3,7 @@
 RFID Server - Standalone RFID card assignment interface
 Allows users to assign RFID cards to users via GUI on OLED display
 """
-import json
+
 import requests
 import time
 from dotenv import load_dotenv
@@ -14,8 +14,9 @@ import neopixel
 from mfrc522 import SimpleMFRC522
 from PIL import Image, ImageDraw, ImageFont
 import lib.oled.SSD1331 as SSD1331
-from common import setup_logger, API_ENDPOINTS, TIMEOUTS, LED_COLORS, RFIDAssignmentStatus
-from config import *
+from common import setup_logger, API_ENDPOINTS, TIMEOUTS, LED_COLORS
+
+from config import buttonGreen, buzzerPin, encoderLeft, encoderRight
 
 logger = setup_logger("RFID_SERVER")
 
@@ -27,7 +28,7 @@ class RFIDServer:
         # --- Load Configuration ---
         load_dotenv()
         self.api_url = os.getenv("API_URL")
-        
+
         if not self.api_url:
             raise ValueError("API_URL not set in .env file")
 
@@ -41,7 +42,7 @@ class RFIDServer:
         self.running = True
         self.users_list = []
         self.selected_user_index = 0
-        
+
         logger.info("RFID Server initialized")
 
     def _setup_gpio(self):
@@ -54,8 +55,8 @@ class RFIDServer:
         self.disp = SSD1331.SSD1331()
         self.disp.Init()
         self.disp.clear()
-        self.font_large = ImageFont.truetype('./lib/oled/Font.ttf', 20)
-        self.font_small = ImageFont.truetype('./lib/oled/Font.ttf', 13)
+        self.font_large = ImageFont.truetype("./lib/oled/Font.ttf", 20)
+        self.font_small = ImageFont.truetype("./lib/oled/Font.ttf", 13)
 
     def _setup_ws2812(self):
         """Initialize WS2812 NeoPixel strip."""
@@ -106,10 +107,10 @@ class RFIDServer:
         try:
             logger.debug("Fetching users without RFID...")
             response = requests.get(
-                self.api_url + API_ENDPOINTS['users_without_rfid'],
-                timeout=TIMEOUTS['api_request']
+                self.api_url + API_ENDPOINTS["users_without_rfid"],
+                timeout=TIMEOUTS["api_request"],
             )
-            
+
             if response.status_code == 200:
                 data = response.json()
                 self.users_list = data.get("users", [])
@@ -135,10 +136,10 @@ class RFIDServer:
         user = self.users_list[self.selected_user_index]
         name = user.get("name", "Unknown")
         status = user.get("status", "unknown")
-        
+
         # Show index info
         info = f"{self.selected_user_index + 1}/{len(self.users_list)}"
-        
+
         self.update_display(f"> {name}", f"{status}  [{info}]", "GREEN")
 
     def wait_for_encoder_scroll(self, timeout=30):
@@ -146,38 +147,42 @@ class RFIDServer:
         self.display_user_list()
         self.play_tone("click")
         self.set_led_strip(LED_COLORS["blue"])
-        
+
         encoder_left_prev = GPIO.input(encoderLeft)
         encoder_right_prev = GPIO.input(encoderRight)
-        
+
         start_time = time.time()
-        
+
         while time.time() - start_time < timeout:
             encoder_left_curr = GPIO.input(encoderLeft)
             encoder_right_curr = GPIO.input(encoderRight)
-            
+
             # Detect falling edge (1 -> 0)
             if encoder_left_prev == 1 and encoder_left_curr == 0:
-                self.selected_user_index = (self.selected_user_index - 1) % len(self.users_list)
+                self.selected_user_index = (self.selected_user_index - 1) % len(
+                    self.users_list
+                )
                 self.play_tone("click")
                 self.display_user_list()
-            
+
             if encoder_right_prev == 1 and encoder_right_curr == 0:
-                self.selected_user_index = (self.selected_user_index + 1) % len(self.users_list)
+                self.selected_user_index = (self.selected_user_index + 1) % len(
+                    self.users_list
+                )
                 self.play_tone("click")
                 self.display_user_list()
-            
+
             # Check green button press
             if GPIO.input(buttonGreen) == 0:
                 self.play_tone("click")
                 time.sleep(0.2)  # Debounce
                 return True
-            
+
             encoder_left_prev = encoder_left_curr
             encoder_right_prev = encoder_right_curr
-            
+
             time.sleep(0.05)
-        
+
         # Timeout
         logger.warning("Encoder selection timeout")
         self.update_display("Timeout", "No selection", "YELLOW")
@@ -187,9 +192,9 @@ class RFIDServer:
         """Wait for RFID card to be placed."""
         self.update_display("Waiting for card...", "Max 10 seconds", "YELLOW")
         self.set_led_strip(LED_COLORS["yellow"])
-        
+
         start_time = time.time()
-        
+
         while time.time() - start_time < timeout:
             try:
                 rfid_data = self.rfid_reader.read_no_block()
@@ -198,9 +203,9 @@ class RFIDServer:
                     return rfid_data[0]
             except Exception as e:
                 logger.debug(f"Error reading RFID: {e}")
-            
+
             time.sleep(0.1)
-        
+
         # Timeout
         logger.warning("RFID card read timeout")
         self.update_display("Timeout!", "No card found", "RED")
@@ -214,31 +219,28 @@ class RFIDServer:
         selected_user = self.users_list[self.selected_user_index]
         user_id = selected_user.get("_id")
         user_name = selected_user.get("name")
-        
+
         try:
             logger.debug(f"Assigning RFID {rfid_id} to user {user_id}")
-            
-            payload = {
-                "userId": user_id,
-                "rfid": str(rfid_id)
-            }
-            
+
+            payload = {"userId": user_id, "rfid": str(rfid_id)}
+
             response = requests.post(
-                self.api_url + API_ENDPOINTS['assign_rfid'],
+                self.api_url + API_ENDPOINTS["assign_rfid"],
                 json=payload,
-                timeout=TIMEOUTS['api_request']
+                timeout=TIMEOUTS["api_request"],
             )
-            
+
             if response.status_code == 200:
                 data = response.json()
                 if data.get("success"):
                     logger.info(f"Successfully assigned RFID to {user_name}")
-                    self.update_display(f"Success!", f"{user_name} assigned", "GREEN")
+                    self.update_display("Success!", f"{user_name} assigned", "GREEN")
                     self.set_led_strip(LED_COLORS["green"])
                     self.play_tone("success")
                     time.sleep(3)
                     return True
-            
+
             logger.error(f"Failed to assign RFID: {response.status_code}")
             self.update_display("Failed", "Assignment error", "RED")
             self.set_led_strip(LED_COLORS["red"])
@@ -257,28 +259,28 @@ class RFIDServer:
         """Execute complete RFID assignment flow once."""
         logger.info("Starting RFID assignment flow")
         self.set_led_strip(LED_COLORS["off"])
-        
+
         # Step 1: Fetch users without RFID
         if not self.get_users_without_rfid():
             time.sleep(2)
             return
-        
+
         if not self.users_list:
             self.update_display("No users", "to assign", "YELLOW")
             time.sleep(2)
             return
-        
+
         # Step 2: Wait for user selection via encoder
         if not self.wait_for_encoder_scroll():
             time.sleep(2)
             return
-        
+
         # Step 3: Wait for RFID card
         rfid_id = self.wait_for_rfid_card()
         if not rfid_id:
             time.sleep(2)
             return
-        
+
         # Step 4: Assign RFID to user
         self.assign_rfid_to_user(rfid_id)
         time.sleep(2)
@@ -289,9 +291,9 @@ class RFIDServer:
             logger.info("Starting RFID Server...")
             self.set_led_strip(LED_COLORS["off"])
             self.update_display("RFID Assign", "Press green button")
-            
+
             logger.debug("Ready for button input")
-            
+
             while self.running:
                 # Check for green button press
                 if GPIO.input(buttonGreen) == 0:
@@ -299,7 +301,7 @@ class RFIDServer:
                     if GPIO.input(buttonGreen) == 0:  # Confirm still pressed
                         self.run_assignment_flow()
                         self.update_display("RFID Assign", "Press green button")
-                
+
                 time.sleep(0.1)
 
         except KeyboardInterrupt:

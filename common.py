@@ -3,39 +3,42 @@
 Common utilities for all server scripts
 Includes: logging configuration, enums, constants
 """
+
 import logging
 from enum import StrEnum
-from typing import Optional
 
 # --- Logging Configuration ---
+
 
 def setup_logger(name: str) -> logging.Logger:
     """Configure and return a logger instance."""
     logger = logging.getLogger(name)
-    
+
     # Only add handlers if not already configured
     if not logger.handlers:
         # Console handler
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.DEBUG)
-        
+
         # Formatter with timestamp and level
         formatter = logging.Formatter(
-            '[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
+            "[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
         console_handler.setFormatter(formatter)
-        
+
         logger.addHandler(console_handler)
         logger.setLevel(logging.DEBUG)
-    
+
     return logger
 
 
 # --- Status Enums ---
 
+
 class AccessStatus(StrEnum):
     """Access decision status"""
+
     GRANTED = "GRANTED"
     DENIED = "DENIED"
     ERROR = "ERROR"
@@ -43,6 +46,7 @@ class AccessStatus(StrEnum):
 
 class AccessReason(StrEnum):
     """Reasons for access decisions"""
+
     BANNED = "BANNED"
     DIRECTION_ERROR = "DIRECTION_ERROR"
     GATE_LOCKED = "GATE_LOCKED"
@@ -53,6 +57,7 @@ class AccessReason(StrEnum):
 
 class RFIDAssignmentStatus(StrEnum):
     """RFID assignment status"""
+
     SUCCESS = "SUCCESS"
     FAILED = "FAILED"
     TIMEOUT = "TIMEOUT"
