@@ -14,10 +14,10 @@ import neopixel
 from mfrc522 import SimpleMFRC522
 from PIL import Image, ImageDraw, ImageFont
 import lib.oled.SSD1331 as SSD1331
+from common import setup_logger, API_ENDPOINTS, TIMEOUTS, LED_COLORS, RFIDAssignmentStatus
 from config import *
 
-ENDPOINT_USERS_WITHOUT_RFID = "/users/without-rfid"
-ENDPOINT_ASSIGN_RFID = "/users/assign-rfid"
+logger = setup_logger("RFID_SERVER")
 
 
 class RFIDServer:
@@ -41,6 +41,8 @@ class RFIDServer:
         self.running = True
         self.users_list = []
         self.selected_user_index = 0
+        
+        logger.info("RFID Server initialized")
 
     def _setup_gpio(self):
         """Initialize GPIO and buzzer."""
@@ -102,21 +104,24 @@ class RFIDServer:
     def get_users_without_rfid(self):
         """Fetch list of users without RFID from backend."""
         try:
-            print("[API] Fetching users without RFID...")
-            response = requests.get(self.api_url + ENDPOINT_USERS_WITHOUT_RFID, timeout=5)
+            logger.debug("Fetching users without RFID...")
+            response = requests.get(
+                self.api_url + API_ENDPOINTS['users_without_rfid'],
+                timeout=TIMEOUTS['api_request']
+            )
             
             if response.status_code == 200:
                 data = response.json()
                 self.users_list = data.get("users", [])
                 self.selected_user_index = 0
-                print(f"[API] Got {len(self.users_list)} users without RFID")
+                logger.info(f"Got {len(self.users_list)} users without RFID")
                 return True
             else:
-                print(f"[API] Failed to fetch users: {response.status_code}")
+                logger.error(f"Failed to fetch users: {response.status_code}")
                 self.update_display("Error", "Failed to fetch users", "RED")
                 return False
         except Exception as e:
-            print(f"[API] Error fetching users: {e}")
+            logger.exception(f"Error fetching users: {e}")
             self.update_display("Error", str(e), "RED")
             return False
 
@@ -140,7 +145,7 @@ class RFIDServer:
         """Wait for encoder input to scroll through user list."""
         self.display_user_list()
         self.play_tone("click")
-        self.set_led_strip((0, 0, 50))  # Blue indication
+        self.set_led_strip(LED_COLORS["blue"])
         
         encoder_left_prev = GPIO.input(encoderLeft)
         encoder_right_prev = GPIO.input(encoderRight)
@@ -174,13 +179,14 @@ class RFIDServer:
             time.sleep(0.05)
         
         # Timeout
+        logger.warning("Encoder selection timeout")
         self.update_display("Timeout", "No selection", "YELLOW")
         return False
 
     def wait_for_rfid_card(self, timeout=10):
         """Wait for RFID card to be placed."""
         self.update_display("Waiting for card...", "Max 10 seconds", "YELLOW")
-        self.set_led_strip((50, 50, 0))  # Yellow wait
+        self.set_led_strip(LED_COLORS["yellow"])
         
         start_time = time.time()
         
@@ -188,17 +194,17 @@ class RFIDServer:
             try:
                 rfid_data = self.rfid_reader.read_no_block()
                 if rfid_data[0]:
-                    print(f"[RFID] Card detected: {rfid_data[0]}")
+                    logger.info(f"Card detected: {rfid_data[0]}")
                     return rfid_data[0]
             except Exception as e:
-                print(f"[RFID] Error reading: {e}")
+                logger.debug(f"Error reading RFID: {e}")
             
             time.sleep(0.1)
         
         # Timeout
-        print("[RFID] Timeout waiting for card")
+        logger.warning("RFID card read timeout")
         self.update_display("Timeout!", "No card found", "RED")
-        self.set_led_strip((255, 0, 0))
+        self.set_led_strip(LED_COLORS["red"])
         self.play_tone("error")
         time.sleep(2)
         return None
@@ -210,7 +216,7 @@ class RFIDServer:
         user_name = selected_user.get("name")
         
         try:
-            print(f"[API] Assigning RFID {rfid_id} to user {user_id}")
+            logger.debug(f"Assigning RFID {rfid_id} to user {user_id}")
             
             payload = {
                 "userId": user_id,
@@ -218,39 +224,39 @@ class RFIDServer:
             }
             
             response = requests.post(
-                self.api_url + ENDPOINT_ASSIGN_RFID,
+                self.api_url + API_ENDPOINTS['assign_rfid'],
                 json=payload,
-                timeout=5
+                timeout=TIMEOUTS['api_request']
             )
             
             if response.status_code == 200:
                 data = response.json()
                 if data.get("success"):
-                    print(f"[API] Successfully assigned RFID to {user_name}")
+                    logger.info(f"Successfully assigned RFID to {user_name}")
                     self.update_display(f"Success!", f"{user_name} assigned", "GREEN")
-                    self.set_led_strip((0, 255, 0))
+                    self.set_led_strip(LED_COLORS["green"])
                     self.play_tone("success")
                     time.sleep(3)
                     return True
             
-            print(f"[API] Failed to assign RFID: {response.status_code}")
+            logger.error(f"Failed to assign RFID: {response.status_code}")
             self.update_display("Failed", "Assignment error", "RED")
-            self.set_led_strip((255, 0, 0))
+            self.set_led_strip(LED_COLORS["red"])
             self.play_tone("error")
             time.sleep(2)
             return False
         except Exception as e:
-            print(f"[API] Error assigning RFID: {e}")
+            logger.exception(f"Error assigning RFID: {e}")
             self.update_display("Error", str(e)[:20], "RED")
-            self.set_led_strip((255, 0, 0))
+            self.set_led_strip(LED_COLORS["red"])
             self.play_tone("error")
             time.sleep(2)
             return False
 
     def run_assignment_flow(self):
         """Execute complete RFID assignment flow once."""
-        print("[RFID] Starting RFID assignment flow")
-        self.set_led_strip((0, 0, 0))
+        logger.info("Starting RFID assignment flow")
+        self.set_led_strip(LED_COLORS["off"])
         
         # Step 1: Fetch users without RFID
         if not self.get_users_without_rfid():
@@ -280,11 +286,11 @@ class RFIDServer:
     def start(self):
         """Main loop - wait for green button and trigger assignment."""
         try:
-            print("[RFID] Starting RFID Server...")
-            self.set_led_strip((0, 0, 0))
+            logger.info("Starting RFID Server...")
+            self.set_led_strip(LED_COLORS["off"])
             self.update_display("RFID Assign", "Press green button")
             
-            print("[RFID] Ready for button input")
+            logger.debug("Ready for button input")
             
             while self.running:
                 # Check for green button press
@@ -297,20 +303,22 @@ class RFIDServer:
                 time.sleep(0.1)
 
         except KeyboardInterrupt:
-            print("\n[RFID] Stopping RFID Server...")
+            logger.info("Stopping RFID Server...")
             self.cleanup()
         except Exception as e:
-            print(f"[RFID] Error: {e}")
+            logger.exception(f"Error: {e}")
             self.cleanup()
 
     def cleanup(self):
         """Clean up resources."""
+        logger.debug("Cleaning up resources...")
         self.running = False
-        self.set_led_strip((0, 0, 0))
+        self.set_led_strip(LED_COLORS["off"])
         self.disp.clear()
         self.disp.reset()
         self.buzzer_pwm.stop()
         GPIO.cleanup()
+        logger.info("Cleanup complete")
 
 
 if __name__ == "__main__":
