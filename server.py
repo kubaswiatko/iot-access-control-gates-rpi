@@ -127,8 +127,8 @@ class Server:
 
     def on_connect(self, client, userdata, flags, rc):
         logger.info(f"MQTT Connected to broker (Code: {rc})")
-        client.subscribe(os.getenv("TOPIC_REQUEST"))
-        logger.info(f"Listening on {os.getenv('TOPIC_REQUEST')}")
+        client.subscribe(self.topic_request)
+        logger.info(f"Listening on {self.topic_request}")
 
     def on_message(self, client, userdata, msg):
         try:
@@ -142,7 +142,7 @@ class Server:
 
             # Send response back to the specific gate
             response_payload = json.dumps(decision)
-            client.publish(os.getenv("TOPIC_RESPONSE"), response_payload)
+            client.publish(self.topic_response, response_payload)
             logger.debug(f"MQTT Sent: {response_payload}")
 
         except json.JSONDecodeError:
