@@ -81,3 +81,9 @@ LED_COLORS = {
     "green": (0, 255, 0),
     "red": (255, 0, 0),
 }
+
+# Parameters used in MQTT configuration
+TOPIC_REQUEST = "gate/request"
+TOPIC_RESPONSE = "gate/response"
+MQTT_PORT = 1883
+MQTT_KEEPALIVE = 60

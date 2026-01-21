@@ -14,7 +14,8 @@ from PIL import Image, ImageDraw, ImageFont
 import lib.oled.SSD1331 as SSD1331
 
 # Common utilities
-from common import setup_logger, AccessStatus, AccessReason, TIMEOUTS, LED_COLORS
+from common import setup_logger, AccessStatus, AccessReason, TIMEOUTS, \
+    LED_COLORS, TOPIC_REQUEST, TOPIC_RESPONSE, MQTT_PORT, MQTT_KEEPALIVE
 
 # Hardware Config
 from config import *
@@ -41,10 +42,10 @@ class AccessGate:
         load_dotenv()
         self.gate_id = os.getenv("GATE_ID")
         self.mqtt_broker = os.getenv("MQTT_BROKER")
-        self.mqtt_port = int(os.getenv("MQTT_PORT", 1883))
-        self.mqtt_keepalive = int(os.getenv("MQTT_KEEPALIVE", 60))
-        self.topic_request = os.getenv("TOPIC_REQUEST")
-        self.topic_response = os.getenv("TOPIC_RESPONSE")
+        self.mqtt_port = MQTT_PORT
+        self.mqtt_keepalive = MQTT_KEEPALIVE
+        self.topic_request = TOPIC_REQUEST
+        self.topic_response = TOPIC_RESPONSE
 
     def _setup_gpio(self):
         self.buzzer_pwm = GPIO.PWM(buzzerPin, 1000) # Initial 1kHz

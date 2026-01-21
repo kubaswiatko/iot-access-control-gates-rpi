@@ -5,7 +5,8 @@ import requests
 import time
 from dotenv import load_dotenv
 import os
-from common import setup_logger, AccessStatus, AccessReason, API_ENDPOINTS, TIMEOUTS
+from common import setup_logger, AccessStatus, AccessReason, API_ENDPOINTS, \
+    TIMEOUTS, TOPIC_RESPONSE, TOPIC_REQUEST, MQTT_PORT, MQTT_KEEPALIVE
 
 logger = setup_logger("SERVER")
 
@@ -16,10 +17,10 @@ class Server:
         #-- MQTT Setup ---
         load_dotenv()
         self.mqtt_broker = os.getenv("MQTT_BROKER")
-        self.mqtt_port = int(os.getenv("MQTT_PORT", 1883))
-        self.mqtt_keepalive = int(os.getenv("MQTT_KEEPALIVE", 60))
-        self.topic_request = os.getenv("TOPIC_REQUEST")
-        self.topic_response = os.getenv("TOPIC_RESPONSE")
+        self.mqtt_port = MQTT_PORT
+        self.mqtt_keepalive = MQTT_KEEPALIVE
+        self.topic_request = TOPIC_REQUEST
+        self.topic_response = TOPIC_RESPONSE
 
         self.client = mqtt.Client()
         self.client.on_connect = self.on_connect
