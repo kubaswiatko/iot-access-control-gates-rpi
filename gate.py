@@ -27,7 +27,7 @@ from common import (
 )
 
 # Hardware Config
-from config import buzzerPin, buttonGreen, buttonRed
+from config import *
 
 logger = setup_logger("GATE")
 
@@ -39,7 +39,7 @@ class AccessGate:
         self.waiting_for_server = False
 
         # --- Hardware Setup ---
-        self._setup_gpio()
+        #self._setup_gpio()
         self._setup_oled()
         self._setup_ws2812()
         self.rfid_reader = SimpleMFRC522()
@@ -139,17 +139,17 @@ class AccessGate:
     def wait_for_direction(self):
         """Waits for Green (IN) or Red (OUT) button press."""
         self.update_display("Select Mode:", "Grn:IN | Red:OUT")
-        self.play_tone("click")
+        #self.play_tone("click")
 
         # Blue indication on LEDs
         self.set_led_strip((0, 0, 50))
 
         while True:
             if GPIO.input(buttonGreen) == 0:  # Pressed (Low)
-                self.play_tone("click")
+                #self.play_tone("click")
                 return "in"
             if GPIO.input(buttonRed) == 0:  # Pressed (Low)
-                self.play_tone("click")
+                #self.play_tone("click")
                 return "out"
 
             time.sleep(0.05)
@@ -183,7 +183,7 @@ class AccessGate:
         if status == AccessStatus.GRANTED:
             self.show_result_image(status)
             self.set_led_strip(LED_COLORS["green"])
-            self.play_tone("success")
+            #self.play_tone("success")
         else:
             # Error or Denied
             # if reason == "BANNED":
@@ -196,7 +196,7 @@ class AccessGate:
             # self.update_display(msg, reason)
             self.show_result_image("DENIED", reason)
             self.set_led_strip((255, 0, 0))  # Red
-            self.play_tone("error")
+            #self.play_tone("error")
 
         time.sleep(3)  # Show result for 3 seconds
         self.waiting_for_server = False

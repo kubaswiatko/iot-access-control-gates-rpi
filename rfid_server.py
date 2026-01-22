@@ -14,7 +14,7 @@ import neopixel
 from mfrc522 import SimpleMFRC522
 from PIL import Image, ImageDraw, ImageFont
 import lib.oled.SSD1331 as SSD1331
-from common import setup_logger, API_ENDPOINTS, TIMEOUTS, LED_COLORS
+from common import *
 
 from config import buttonGreen, buzzerPin, encoderLeft, encoderRight
 
@@ -33,7 +33,7 @@ class RFIDServer:
             raise ValueError("API_URL not set in .env file")
 
         # --- Hardware Setup ---
-        self._setup_gpio()
+        #self._setup_gpio()
         self._setup_oled()
         self._setup_ws2812()
         self.rfid_reader = SimpleMFRC522()
@@ -145,7 +145,7 @@ class RFIDServer:
     def wait_for_encoder_scroll(self, timeout=30):
         """Wait for encoder input to scroll through user list."""
         self.display_user_list()
-        self.play_tone("click")
+        #self.play_tone("click")
         self.set_led_strip(LED_COLORS["blue"])
 
         encoder_left_prev = GPIO.input(encoderLeft)
@@ -162,19 +162,19 @@ class RFIDServer:
                 self.selected_user_index = (self.selected_user_index - 1) % len(
                     self.users_list
                 )
-                self.play_tone("click")
+                #self.play_tone("click")
                 self.display_user_list()
 
             if encoder_right_prev == 1 and encoder_right_curr == 0:
                 self.selected_user_index = (self.selected_user_index + 1) % len(
                     self.users_list
                 )
-                self.play_tone("click")
+                #self.play_tone("click")
                 self.display_user_list()
 
             # Check green button press
             if GPIO.input(buttonGreen) == 0:
-                self.play_tone("click")
+                #self.play_tone("click")
                 time.sleep(0.2)  # Debounce
                 return True
 
@@ -210,7 +210,7 @@ class RFIDServer:
         logger.warning("RFID card read timeout")
         self.update_display("Timeout!", "No card found", "RED")
         self.set_led_strip(LED_COLORS["red"])
-        self.play_tone("error")
+        #self.play_tone("error")
         time.sleep(2)
         return None
 
@@ -237,21 +237,21 @@ class RFIDServer:
                     logger.info(f"Successfully assigned RFID to {user_name}")
                     self.update_display("Success!", f"{user_name} assigned", "GREEN")
                     self.set_led_strip(LED_COLORS["green"])
-                    self.play_tone("success")
+                    #self.play_tone("success")
                     time.sleep(3)
                     return True
 
             logger.error(f"Failed to assign RFID: {response.status_code}")
             self.update_display("Failed", "Assignment error", "RED")
             self.set_led_strip(LED_COLORS["red"])
-            self.play_tone("error")
+            #self.play_tone("error")
             time.sleep(2)
             return False
         except Exception as e:
             logger.exception(f"Error assigning RFID: {e}")
             self.update_display("Error", str(e)[:20], "RED")
             self.set_led_strip(LED_COLORS["red"])
-            self.play_tone("error")
+            #self.play_tone("error")
             time.sleep(2)
             return False
 
