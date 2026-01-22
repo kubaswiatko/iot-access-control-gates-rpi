@@ -16,7 +16,7 @@ from PIL import Image, ImageDraw, ImageFont
 import lib.oled.SSD1331 as SSD1331
 from common import *
 
-from config import buttonGreen, buzzerPin, encoderLeft, encoderRight
+from config import *
 
 logger = setup_logger("RFID_SERVER")
 
@@ -140,7 +140,7 @@ class RFIDServer:
         # Show index info
         info = f"{self.selected_user_index + 1}/{len(self.users_list)}"
 
-        self.update_display(f"> {name}", f"{status}  [{info}]", "GREEN")
+        self.update_display(f"> {name}", f"{status}  [{info}]", "WHITE")
 
     def wait_for_encoder_scroll(self, timeout=30):
         """Wait for encoder input to scroll through user list."""

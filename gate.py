@@ -127,6 +127,9 @@ class AccessGate:
                 else:
                     text = "Access Denied"
 
+            # Resize image to OLED resolution (96x64)
+            image = image.resize((self.disp.width, self.disp.height), Image.LANCZOS)
+            
             # Display image
             self.disp.ShowImage(image, 0, 0)
 
@@ -186,19 +189,22 @@ class AccessGate:
             #self.play_tone("success")
         else:
             # Error or Denied
-            # if reason == "BANNED":
-            #     msg = "USER BANNED"
-            # elif reason == "DIRECTION_ERROR":
-            #     msg = "ALREADY IN/OUT"
-            # else:
-            #     msg = "ACCESS DENIED"
-
-            # self.update_display(msg, reason)
+            
             self.show_result_image("DENIED", reason)
             self.set_led_strip((255, 0, 0))  # Red
+            time.sleep(2)
+
+            if reason == "BANNED":
+                msg = "USER BANNED"
+            elif reason == "DIRECTION_ERROR":
+                msg = "ALREADY IN/OUT"
+            else:
+                msg = "ACCESS DENIED"
+
+            self.update_display(msg, reason)
+            time.sleep(3)
             #self.play_tone("error")
 
-        time.sleep(3)  # Show result for 3 seconds
         self.waiting_for_server = False
 
     # --- MQTT Callbacks ---
