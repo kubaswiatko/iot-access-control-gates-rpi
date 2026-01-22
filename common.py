@@ -5,7 +5,7 @@ Includes: logging configuration, enums, constants
 """
 
 import logging
-from enum import StrEnum
+from strenum import StrEnum
 
 # --- Logging Configuration ---
 
@@ -73,10 +73,10 @@ API_ENDPOINTS = {
 }
 
 TIMEOUTS = {
-    "api_request": 5,
+    "api_request": 10,
     "rfid_card": 10,
     "encoder_selection": 30,
-    "mqtt_response": 5,
+    "mqtt_response": 15,
 }
 
 LED_COLORS = {

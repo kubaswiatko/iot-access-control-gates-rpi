@@ -281,7 +281,7 @@ class AccessGate:
         self.set_led_strip(LED_COLORS["off"])
         self.disp.clear()
         self.disp.reset()
-        self.buzzer_pwm.stop()
+        #self.buzzer_pwm.stop()
         GPIO.cleanup()
         self.mqtt_client.loop_stop()
         logger.info("Cleanup complete")

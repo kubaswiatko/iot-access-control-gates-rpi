@@ -318,7 +318,7 @@ class RFIDServer:
         self.set_led_strip(LED_COLORS["off"])
         self.disp.clear()
         self.disp.reset()
-        self.buzzer_pwm.stop()
+        #self.buzzer_pwm.stop()
         GPIO.cleanup()
         logger.info("Cleanup complete")
 
