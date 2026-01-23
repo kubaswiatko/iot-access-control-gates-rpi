@@ -9,11 +9,9 @@ import paho.mqtt.client as mqtt
 from dotenv import load_dotenv
 import os
 
-# OLED Imports
 from PIL import Image, ImageDraw, ImageFont
 import lib.oled.SSD1331 as SSD1331
 
-# Common utilities
 from common import (
     setup_logger,
     AccessStatus,
@@ -26,7 +24,6 @@ from common import (
     MQTT_KEEPALIVE,
 )
 
-# Hardware Config
 from config import *
 
 logger = setup_logger("GATE")
@@ -39,7 +36,6 @@ class AccessGate:
         self.waiting_for_server = False
 
         # --- Hardware Setup ---
-        #self._setup_gpio()
         self._setup_oled()
         self._setup_ws2812()
         self.rfid_reader = SimpleMFRC522()
@@ -57,10 +53,6 @@ class AccessGate:
         self.topic_request = TOPIC_REQUEST
         self.topic_response = TOPIC_RESPONSE
 
-    def _setup_gpio(self):
-        self.buzzer_pwm = GPIO.PWM(buzzerPin, 1000)  # Initial 1kHz
-        self.buzzer_pwm.start(0)  # Start with 0% duty cycle (silent)
-
     def _setup_oled(self):
         self.disp = SSD1331.SSD1331()
         self.disp.Init()
@@ -69,9 +61,8 @@ class AccessGate:
         self.font_small = ImageFont.truetype("./lib/oled/Font.ttf", 13)
 
     def _setup_ws2812(self):
-        # Initialize NeoPixels on GPIO 18
         self.pixels = neopixel.NeoPixel(board.D18, 8, brightness=0.1, auto_write=False)
-        self.set_led_strip((0, 0, 0))  # Off
+        self.set_led_strip((0, 0, 0))
 
     # --- Feedback Methods ---
 
@@ -79,30 +70,6 @@ class AccessGate:
         """Sets the entire WS2812 strip to a color (R, G, B)."""
         self.pixels.fill(color)
         self.pixels.show()
-
-    def play_tone(self, tone_type):
-        """Plays a melody based on type: 'success', 'error', 'click'."""
-        if tone_type == "click":
-            self.buzzer_pwm.ChangeDutyCycle(50)
-            self.buzzer_pwm.ChangeFrequency(2000)
-            time.sleep(0.05)
-            self.buzzer_pwm.ChangeDutyCycle(0)
-        elif tone_type == "success":
-            self.buzzer_pwm.ChangeDutyCycle(50)
-            self.buzzer_pwm.ChangeFrequency(1000)
-            time.sleep(0.1)
-            self.buzzer_pwm.ChangeFrequency(1500)
-            time.sleep(0.1)
-            self.buzzer_pwm.ChangeFrequency(2000)
-            time.sleep(0.2)
-            self.buzzer_pwm.ChangeDutyCycle(0)
-        elif tone_type == "error":
-            self.buzzer_pwm.ChangeDutyCycle(50)
-            self.buzzer_pwm.ChangeFrequency(500)
-            time.sleep(0.3)
-            self.buzzer_pwm.ChangeFrequency(300)
-            time.sleep(0.3)
-            self.buzzer_pwm.ChangeDutyCycle(0)
 
     def update_display(self, line1, line2="", color="WHITE"):
         """Draws text on the OLED screen."""
@@ -127,32 +94,25 @@ class AccessGate:
                 else:
                     text = "Access Denied"
 
-            # Resize image to OLED resolution (96x64)
             image = image.resize((self.disp.width, self.disp.height), Image.LANCZOS)
-            
-            # Display image
+
             self.disp.ShowImage(image, 0, 0)
 
         except Exception as e:
             logger.error(f"Error displaying image: {e}")
-            # Fallback to text display
+
             self.update_display(text, reason, "YELLOW")
 
-    # --- Core Logic ---
     def wait_for_direction(self):
         """Waits for Green (IN) or Red (OUT) button press."""
         self.update_display("Select Mode:", "Grn:IN | Red:OUT")
-        #self.play_tone("click")
 
-        # Blue indication on LEDs
         self.set_led_strip((0, 0, 50))
 
         while True:
-            if GPIO.input(buttonGreen) == 0:  # Pressed (Low)
-                #self.play_tone("click")
+            if GPIO.input(buttonGreen) == 0:
                 return "in"
-            if GPIO.input(buttonRed) == 0:  # Pressed (Low)
-                #self.play_tone("click")
+            if GPIO.input(buttonRed) == 0:
                 return "out"
 
             time.sleep(0.05)
@@ -166,16 +126,12 @@ class AccessGate:
         payload = {"rfid": rfid_id, "gate_id": self.gate_id, "direction": direction}
         self.mqtt_client.publish(self.topic_request, json.dumps(payload))
 
-        # Wait for response (handled in _on_mqtt_message)
         timeout = 0
-        while (
-            self.waiting_for_server and timeout < TIMEOUTS["mqtt_response"] * 10
-        ):  # 5 seconds timeout
+        while self.waiting_for_server and timeout < TIMEOUTS["mqtt_response"] * 10:
             time.sleep(0.1)
             timeout += 1
 
         if self.waiting_for_server:
-            # Timeout happened
             logger.warning(f"MQTT response timeout for RFID {rfid_id}")
             self.handle_result(AccessStatus.ERROR, AccessReason.NETWORK_FAIL)
 
@@ -186,12 +142,9 @@ class AccessGate:
         if status == AccessStatus.GRANTED:
             self.show_result_image(status)
             self.set_led_strip(LED_COLORS["green"])
-            #self.play_tone("success")
         else:
-            # Error or Denied
-            
             self.show_result_image("DENIED", reason)
-            self.set_led_strip((255, 0, 0))  # Red
+            self.set_led_strip((255, 0, 0))
             time.sleep(2)
 
             if reason == "BANNED":
@@ -203,11 +156,8 @@ class AccessGate:
 
             self.update_display(msg, reason)
             time.sleep(3)
-            #self.play_tone("error")
 
         self.waiting_for_server = False
-
-    # --- MQTT Callbacks ---
 
     def _on_mqtt_connect(self, client, userdata, flags, rc):
         logger.info(f"MQTT Connected with code {rc}")
@@ -217,7 +167,6 @@ class AccessGate:
         try:
             payload = json.loads(msg.payload.decode())
             resp_gate = payload.get("gate_id")
-            # Ignore responses intended for other gates
             if resp_gate is None:
                 logger.warning("Response without gate_id received")
                 return
@@ -232,37 +181,30 @@ class AccessGate:
         except Exception as e:
             logger.exception(f"Error processing MQTT message: {e}")
 
-    # --- Main Loop ---
-
     def start(self):
         try:
             self.mqtt_client.connect(
                 self.mqtt_broker, self.mqtt_port, self.mqtt_keepalive
             )
-            self.mqtt_client.loop_start()  # Run MQTT in background thread
+            self.mqtt_client.loop_start()
 
             logger.info("System Ready.")
 
             while self.running:
-                # 1. Idle State
                 self.update_display("Gate Ready", "Place Card...")
                 self.set_led_strip(LED_COLORS["off"])
 
-                # 2. Read RFID
                 try:
                     rfid_id = self.rfid_reader.read_no_block()[0]
 
                     if rfid_id:
                         logger.info(f"Card Detected: {rfid_id}")
 
-                        # 3. Select Direction
                         direction = self.wait_for_direction()
                         logger.debug(f"Direction: {direction}")
 
-                        # 4. Verify Access
                         self.process_access(rfid_id, direction)
 
-                        # Prevent immediate re-read
                         time.sleep(1)
 
                 except Exception as e:
@@ -281,7 +223,6 @@ class AccessGate:
         self.set_led_strip(LED_COLORS["off"])
         self.disp.clear()
         self.disp.reset()
-        #self.buzzer_pwm.stop()
         GPIO.cleanup()
         self.mqtt_client.loop_stop()
         logger.info("Cleanup complete")

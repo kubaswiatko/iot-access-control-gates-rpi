@@ -43,7 +43,6 @@ class Server:
         Sends request to Convex HTTP Action and maps the response to a gate command.
         """
         try:
-            # Determine direction string required by API ("in" | "out")
             direction = payload.get("direction", "in")
             gate_id = payload.get("gate_id")
 
@@ -137,10 +136,8 @@ class Server:
 
             request_data = json.loads(payload_str)
 
-            # Process logic via API
             decision = self.get_access_decision(request_data)
 
-            # Send response back to the specific gate
             response_payload = json.dumps(decision)
             client.publish(self.topic_response, response_payload)
             logger.debug(f"MQTT Sent: {response_payload}")

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# pylint: disable=no-member
 
 import RPi.GPIO as GPIO
 
